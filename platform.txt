@@ -1,0 +1,85 @@
+name=ZephyrOS Platform
+version=1.6.9
+
+compiler.warning_flags=-w
+compiler.warning_flags.none=-w
+compiler.warning_flags.default=
+compiler.warning_flags.more=-Wall
+compiler.warning_flags.all=-Wall -Wextra
+
+compiler.c.flags=
+compiler.S.flags=
+compiler.cpp.flags=
+compiler.ar.flags=rcs
+compiler.ldflags=
+
+# This can be overriden in boards.txt
+build.extra_flags=
+
+# These can be overridden in platform.local.txt
+compiler.c.extra_flags=
+compiler.c.elf.extra_flags=
+compiler.S.extra_flags=
+compiler.cpp.extra_flags=
+compiler.ar.extra_flags=
+
+# Makefile generate patterns
+# --------------------
+
+build.make.command=cmake
+build.make.command.windows={runtime.platform.path}/system/support/wsl_wrap.bat
+build.intiki.verbose=-1
+build.zephyr.env=ZEPHYR_BASE={build.system.path}/zephyr ZEPHYR_TOOLCHAIN_VARIANT=zephyr ZEPHYR_SDK_INSTALL_DIR=/opt/zephyr-sdk
+
+intiki.cmd={runtime.tools.intiki.path}/intiki
+intiki.cmd-v={intiki.cmd} {compiler.warning_flags} -verbose {build.intiki.verbose}
+intiki.opts=
+intiki.opts.windows=-path.format msys -path.prefix /mnt
+make.paths=-build.compiler.path "{build.compiler.path}" -build.system.path "{build.system.path}" -build.variant.path "{build.variant.path}" -build.core.path "{build.core.path}" -build.path "{build.path}" -build.variant {build.variant} -runtime.platform.path {runtime.platform.path} -platform.version {version} {intiki.opts}
+make.args=-E env {build.zephyr.env} cmake -DARDUINO_BUILD_PATH={build.path} -DARDUINO_VARIANT_PATH={build.variant.path} -DARDUINO_PREPROC_SOURCE={source_file} -DARDUINO_PREPROC_TARGET={preprocessed_file_path} -DBOARD={build.variant}
+
+arduino.defines=-DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch}
+
+## Compile c files
+recipe.c.o.pattern={intiki.cmd-v} -recipe c.o   {make.paths} -source "{source_file}" -target "{object_file}" -- {compiler.c.flags} {compiler.c.extra_flags} {build.extra_flags} {arduino.defines} {includes}
+
+## Compile c++ files
+recipe.cpp.o.pattern={intiki.cmd-v} -recipe cpp.o {make.paths} -source "{source_file}" -target "{object_file}" -- {compiler.cpp.flags} {compiler.cpp.extra_flags} {build.extra_flags} {arduino.defines} {includes}
+
+## Compile S files
+recipe.S.o.pattern={intiki.cmd-v} -recipe S.o {make.paths} -source "{source_file}" -target "{object_file}" -- {compiler.S.flags} {compiler.S.extra_flags} {build.extra_flags} {ardino.defines} {includes}
+
+## Create archives
+recipe.ar.pattern={intiki.cmd-v} -recipe ar    {make.paths} -source "{object_file}" -target "{archive_file_path}" -- {compiler.ar.flags} {compiler.ar.extra_flags}
+
+## Combine gc-sections, archives, and objects
+recipe.c.combine.pattern={intiki.cmd-v} -recipe ld    {make.paths} -target "{build.path}/{build.project_name}.elf" -project_name {build.project_name} -archive_file {archive_file}
+
+## Save hex
+recipe.output.tmp_file={build.project_name}.bin
+recipe.output.save_file={build.project_name}.{build.variant}.bin
+
+## Compute size
+recipe.size.pattern={intiki.cmd-v} -recipe make {make.paths} {make.args} size
+recipe.size.regex=\.text\s+([0-9]+).*
+
+
+
+## Preprocessor
+preproc.macros.flags=-w -x c++ -E -CC {compiler.cpp.flags} -DF_CPU={build.f_cpu} {arduino.defines} {compiler.cpp.extra_flags} {build.extra_flags} -includes {includes} -make-args {make.args}
+recipe.preproc.macros={intiki.cmd-v} -recipe preproc.macros {make.paths} -make.command {build.make.command} -source "{source_file}" -target "{preprocessed_file_path}" -template {build.system.path}/support/CMakeLists.txt.template -makefile {build.path}/preproc/_cmakefile/CMakeLists.txt -- {preproc.macros.flags} -P {build.system.path}/support/preproc.cmake
+
+recipe.hooks.sketch.prebuild.1.pattern={intiki.cmd-v} -recipe stage -stage sketch {make.paths}
+recipe.hooks.libraries.prebuild.1.pattern={intiki.cmd-v} -recipe stage -stage libraries {make.paths}
+recipe.hooks.core.prebuild.1.pattern={intiki.cmd-v} -recipe stage -stage core {make.paths}
+recipe.hooks.linking.prelink.1.pattern={intiki.cmd-v} -recipe stage -stage link {make.paths}
+recipe.hooks.objcopy.preobjcopy.1.pattern={intiki.cmd-v} -recipe makefile {make.paths} -template {build.system.path}/support/CMakeLists.txt.template -makefile {build.path}/_cmakefile/CMakeLists.txt
+recipe.hooks.objcopy.preobjcopy.2.pattern={intiki.cmd-v} -recipe make {make.paths} -make.command {build.make.command} -- {make.args} -P {build.system.path}/support/build.cmake
+recipe.hooks.postbuild.1.pattern={intiki.cmd-v} -recipe make {make.paths} -make.command {build.make.command} -- {make.args} -P {build.system.path}/support/postbuild.cmake
+
+
+tools.west.upload.cmd.windows={runtime.platform.path}/system/support/west_wrap.bat
+tools.west.upload.cmd={runtime.platform.path}/system/support/west_wrap.sh
+tools.west.upload.pattern={upload.cmd} -z {runtime.platform.path}/system/zephyr flash --skip-rebuild --build-dir {build.path} --hex-file {build.path}/zephyr/zephyr.hex
+tools.west.upload.params.verbose=
+tools.west.upload.params.quiet=
