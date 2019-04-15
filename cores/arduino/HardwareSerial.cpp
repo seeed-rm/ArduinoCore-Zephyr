@@ -1,49 +1,56 @@
-/**
-* The MIT License (MIT)
-* 
-* Copyright (C) 2019  Seeed Technology Co.,Ltd. 
-* 
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-* 
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-* 
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
+/*
+  Copyright (c) 2015-2016 Tokita, Hiroshi  All right reserved.
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <stdio.h>
-#include "Arduino.h"
+#include <zephyr.h>
+#include <device.h>
+#include <gpio.h>
+#include <uart.h>
+
+#include "variant.h"
 #include "HardwareSerial.h"
+#include "PeripheralPins.h"
 
-// Constructors ////////////////////////////////////////////////////////////////
+#ifndef max
+#define max(A, B) ((A) < (B) ? (B) : (A))
+#endif
+
 HardwareSerial::HardwareSerial(uint32_t _rx, uint32_t _tx) {
-	init();
-}
+	_rxPin = _rx;
+	_txPin = _tx;
 
-void HardwareSerial::init(void) {
+	if (pin_in_PeripheralPinMap(_rx, PinMap_UART_RX)) {
+		uart = device_get_binding(DevLab[PinMap[_rx].PioType]);
+	} else if (pin_in_PeripheralPinMap(_tx, PinMap_UART_TX)) {
+		uart = device_get_binding(DevLab[PinMap[_tx].PioType]);
+	} else {
+		uart = NULL;
+	}
 }
 
 void HardwareSerial::begin(unsigned long baudrate) {
 	begin(baudrate, SERIAL_8N1);
 }
 
-void HardwareSerial::begin(unsigned long baud, uint16_t conf) {
-	begin_impl(baud, conf);
+void HardwareSerial::begin(unsigned long baudrate, uint16_t config) {
+	begin_impl(baudrate, config);
 }
 
-void HardwareSerial::begin_impl(unsigned long baud, uint16_t conf)
-{
+void HardwareSerial::begin_impl(unsigned long baud, uint16_t config) {
 	//TODO newapi
 	uart_irq_callback_user_data_set(uart, HardwareSerial::IrqDispatch, this);
 	uart_irq_rx_enable(uart);
@@ -85,44 +92,44 @@ void HardwareSerial::IrqHandler()
 
 void HardwareSerial::IrqDispatch(void* data)
 {
-	reinterpret_cast<Uart*>(data)->IrqHandler();
+	reinterpret_cast<HardwareSerial *>(data)->IrqHandler();
 }
 
-int HardwareSerial::available(void) {
+int HardwareSerial::available()
+{
 	return (uint32_t)(SERIAL_BUFFER_SIZE + rxBuffer._iHead - rxBuffer._iTail) % SERIAL_BUFFER_SIZE;
 }
 
-int HardwareSerial::availableForWrite(void) {
+int HardwareSerial::availableForWrite()
+{
 	return 0;//return uart->txbuffer_availables(uart->portinfo);
 }
 
-void HardwareSerial::flush() {
-	//while (uart_irq_tx_complete(uart) );
-}
-
-int HardwareSerial::peek(void) {
+int HardwareSerial::peek()
+{
 	return rxBuffer.peek();
 }
 
-int HardwareSerial::read(void) {
+int HardwareSerial::read()
+{
 	return rxBuffer.read_char();
 }
 
-size_t HardwareSerial::write(uint8_t *buffer, size_t size) {
-	int written = 0;
-	int length = size;
-	
+size_t HardwareSerial::write(const uint8_t *buffer, size_t size)
+{
 	uart_irq_tx_enable(uart);
 
-	while (length) {
+	int len = size;
+	while (len) {
+		int written;
+
 		data_transmitted = false;
-		
-		written = uart_fifo_fill(uart, buffer, length);
+		written = uart_fifo_fill(uart, buffer, len);
 		while (data_transmitted == false) {
 			k_yield();
 		}
 
-		length -= written;
+		len -= written;
 		buffer += written;
 	}
 
@@ -130,7 +137,9 @@ size_t HardwareSerial::write(uint8_t *buffer, size_t size) {
 	return 0;
 }
 
-size_t HardwareSerial::write(uint8_t c) {
-	return write(&c, 1);
-}
 
+size_t HardwareSerial::write(const uint8_t data)
+{
+	write(&data, 1);
+	return 1;
+}
