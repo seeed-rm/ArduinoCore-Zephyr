@@ -1,21 +1,3 @@
-/*
- Copyright (c) 2011 Arduino.  All right reserved.
-
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Lesser General Public
- License as published by the Free Software Foundation; either
- version 2.1 of the License, or (at your option) any later version.
-
- This library is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- See the GNU Lesser General Public License for more details.
-
- You should have received a copy of the GNU Lesser General Public
- License along with this library; if not, write to the Free Software
- Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- */
- 
 /**
 * The MIT License (MIT)
 * 
@@ -40,20 +22,61 @@
 * THE SOFTWARE.
 */
 
-#ifndef Pins_Arduino_h
-#define Pins_Arduino_h
-
 #include "Variant.h"
 
-#define LED1_GPIO_PIN		(2)
-#define LED2_GPIO_PIN		(3)
-#define LED3_GPIO_PIN		(4)
-#define LED4_GPIO_PIN		(5)
+const char * DevLab[] = {
+	DEV_GPIO_0_STRING,
+	DEV_SPI_0_STRING,
+	DEV_SPI_1_STRING,
+	DEV_SPI_2_STRING,
+	DEV_SPI_3_STRING,
+	DEV_I2C_0_STRING,
+	DEV_I2C_1_STRING,
+	DEV_I2C_2_STRING,
+	DEV_I2C_3_STRING,
+	DEV_UART_0_STRING,
+	DEV_UART_1_STRING,
+	DEV_UART_2_STRING,
+	DEV_UART_3_STRING,
+	DEV_I2S_STRING,
+	DEV_PWM_0_STRING,
+	DEV_PWM_1_STRING,
+	DEV_PWM_2_STRING,
+	DEV_ADC_0_STRING,
+};
 
-#define SW1_GPIO_PIN		(8)
-#define SW2_GPIO_PIN		(9)
+const PinDescription PinMap[PinMap_Max] = {
+	{P0_00, PIO_UART_1},
+	{P0_01, PIO_UART_1},
+	{P0_02, PIO_PWM_0},//PIO_GPIO_0},
+	{P0_03, PIO_GPIO_0},
+	{P0_04, PIO_GPIO_0},
+	{P0_05, PIO_GPIO_0},
+	{P0_06, PIO_GPIO_0},
+	{P0_07, PIO_GPIO_0},
+	{P0_08, PIO_GPIO_0},
+	{P0_09, PIO_GPIO_0},
+	{P0_10, PIO_UART_0},
+	{P0_11, PIO_UART_0},
+	{P0_12, PIO_GPIO_0},
+	{P0_13, PIO_GPIO_0},
+	{P0_14, PIO_UART_1},
+	{P0_15, PIO_UART_1},
+	{P0_16, PIO_GPIO_0},
+	{P0_17, PIO_SPI_3},
+	{P0_18, PIO_SPI_3},
+	{P0_19, PIO_SPI_3},
+	{P0_20, PIO_UART_0},
+	{P0_21, PIO_UART_0},
+	{P0_22, PIO_GPIO_0},
+	{P0_23, PIO_GPIO_0},
+	{P0_24, PIO_GPIO_0},
+	{P0_25, PIO_GPIO_0},
+	{P0_26, PIO_UART_0},
+	{P0_27, PIO_UART_0},
+	{P0_28, PIO_UART_0},
+	{P0_29, PIO_UART_0},
+	{P0_30, PIO_I2C_2},
+	{P0_31, PIO_I2C_2},
+};
 
-#define BUTTON1_GPIO_PIN	(6)
-#define BUTTON2_GPIO_PIN	(7)
-
-#endif // Pins_Arduino_h
