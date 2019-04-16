@@ -23,37 +23,54 @@
 
 #include "variant.h"
 #include "HardwareSerial.h"
+
+#ifdef __cplusplus
+extern "C" {
 #include "PeripheralPins.h"
+}
+#endif
 
 #ifndef max
 #define max(A, B) ((A) < (B) ? (B) : (A))
 #endif
 
-HardwareSerial::HardwareSerial(uint32_t _rx, uint32_t _tx) {
-	_rxPin = _rx;
-	_txPin = _tx;
+HardwareSerial::HardwareSerial() {
+	uart = device_get_binding("UART_0");
+}
 
-	if (pin_in_PeripheralPinMap(_rx, PinMap_UART_RX)) {
-		uart = device_get_binding(DevLab[PinMap[_rx].PioType]);
-	} else if (pin_in_PeripheralPinMap(_tx, PinMap_UART_TX)) {
-		uart = device_get_binding(DevLab[PinMap[_tx].PioType]);
-	} else {
-		uart = NULL;
+void HardwareSerial::begin(unsigned long baudrate, uint32_t tx_pin, uint32_t rx_pin) {
+	begin(baudrate, SERIAL_8N1, tx_pin, rx_pin);
+}
+
+void HardwareSerial::begin(unsigned long baudrate, uint16_t config, uint32_t tx_pin, uint32_t rx_pin) {
+	uint8_t index = 0xff;
+	struct uart_config uart_cfg;
+
+	uart_cfg.baudrate = baudrate;
+	uart_cfg.parity = config & 0x0f;
+	uart_cfg.stop_bits = (config >> 4) & 0x0f;
+	uart_cfg.data_bits = (config >> 8) & 0x0f;
+	uart_cfg.flow_ctrl = (config >> 12) & 0x0f;
+
+	if ((tx_pin != rx_pin) || (tx_pin < ALL_GPIOS_NUM) || (rx_pin < ALL_GPIOS_NUM)) {
+		if (0xff != (index = pin_in_PeripheralPinMap(PinMap[tx_pin].PinName, PinMap_UART_TX))) {
+			uart = device_get_binding(PinMap_UART_TX[index].label_name);
+			printk("tx->label = %s\r\n", PinMap_UART_TX[index].label_name);
+		} else if (0xff != (index = pin_in_PeripheralPinMap(PinMap[rx_pin].PinName, PinMap_UART_RX))) {
+			uart = device_get_binding(PinMap_UART_RX[index].label_name);
+			printk("rx->label = %s\r\n", PinMap_UART_RX[index].label_name);
+		} else {
+			uart = NULL;
+			printk("label is NULL\r\n");
+		}
+		
+		if (NULL != uart) {
+			printk("set callback function\r\n");
+			uart_configure(uart, &uart_cfg);
+			uart_irq_callback_user_data_set(uart, IrqDispatch, this);
+			uart_irq_rx_enable(uart);
+		}
 	}
-}
-
-void HardwareSerial::begin(unsigned long baudrate) {
-	begin(baudrate, SERIAL_8N1);
-}
-
-void HardwareSerial::begin(unsigned long baudrate, uint16_t config) {
-	begin_impl(baudrate, config);
-}
-
-void HardwareSerial::begin_impl(unsigned long baud, uint16_t config) {
-	//TODO newapi
-	uart_irq_callback_user_data_set(uart, HardwareSerial::IrqDispatch, this);
-	uart_irq_rx_enable(uart);
 }
 
 void HardwareSerial::end()
