@@ -59,7 +59,7 @@
 
 typedef struct _PeripheralPinMap {
 	uint32_t PinName;
-	char *dev;
+	char *label_name;
 	uint32_t channel; // pwm or adc channel
 } PeripheralPinMap;
 
@@ -76,6 +76,5 @@ extern PeripheralPinMap PinMap_UART_CTS[];
 extern PeripheralPinMap PinMap_PWM[];
 extern PeripheralPinMap PinMap_ADC[];
 
-extern bool pin_in_PeripheralPinMap(uint32_t pin, PeripheralPinMap *peripheralPinMap);
-extern uint8_t get_peripheralPinMap_index(uint32_t pin, PeripheralPinMap *peripheralPinMap);
+extern uint8_t pin_in_PeripheralPinMap(uint32_t pin, PeripheralPinMap *peripheralPinMap);
 #endif // PeripheralPins_h

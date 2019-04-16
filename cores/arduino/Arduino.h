@@ -85,7 +85,8 @@ void loop( void ) ;
   #include "HardwareSerial.h"
   #include "pulse.h"
   // Include board variant
-#include "Variant.h"
+  #include "Variant.h"
+  #include "WInterrupts.h"
 #endif
 #ifdef __cplusplus
   #include "Uart.h"
@@ -97,7 +98,6 @@ void loop( void ) ;
 #include "wiring_digital.h"
 #include "wiring_analog.h"
 #include "wiring_shift.h"
-#include "WInterrupts.h"
 #include "PeripheralPins.h"
 #include "wiring_timer.h"
 

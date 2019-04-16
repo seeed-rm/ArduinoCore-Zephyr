@@ -32,9 +32,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-extern int gpio_configs[PinMap_Max];
+extern int gpio_configs[ALL_GPIOS_NUM];
 
-extern struct gpio_callback gpio_cb[PinMap_Max];
+extern struct gpio_callback gpio_cb[ALL_GPIOS_NUM];
 
 struct uart_device {
 	int     (*input)( uint8_t c);

@@ -98,10 +98,9 @@ uint32_t analogRead(uint32_t ulPin) {
 		.options = &options,
 	};
 
-	if (ulPin < PinMap_Max) {
-		if (pin_in_PeripheralPinMap(ulPin, PinMap_ADC)) {
-			index = get_peripheralPinMap_index(ulPin, PinMap_ADC);
-			dev = device_get_binding(DevLab[PinMap[ulPin].PioType]);
+	if (ulPin < ALL_GPIOS_NUM) {
+		if (0xff != (index = pin_in_PeripheralPinMap(ulPin, PinMap_ADC))) {
+			dev = device_get_binding(PinMap_ADC[index].label_name);
 			if ((0xff != index) && (NULL != dev)) {
 				adc_ch_cfg.channel_id = PinMap_ADC[index].channel;
 				adc_ch_cfg.differential = false;
@@ -131,13 +130,21 @@ uint32_t analogRead(uint32_t ulPin) {
 // variant.cpp file.  For the rest of the pins, we default
 // to digital output.
 void analogWrite(uint32_t ulPin, uint32_t ulValue) {
+	uint8_t index = 0xff;
 	uint16_t period = 0;
 	struct device *dev;
 
-	if (ulPin < PinMap_Max) {
-		if (PIO_PWM_0 == PinMap[ulPin].PioType) {
-			if (pin_in_PeripheralPinMap(PinMap[ulPin].PinName, PinMap_PWM)) {
-				dev = device_get_binding(DevLab[PinMap[ulPin].PioType]);
+	if (ulPin < ALL_GPIOS_NUM) {
+		if (PIO_PWM_0 != PinMap[ulPin].PioType) {
+			pinMode(ulPin, OUTPUT);
+			if (ulValue > 0x7f) {
+				digitalWrite(ulPin, HIGH);
+			} else {
+				digitalWrite(ulPin, LOW);
+			}
+		} else {			
+			if (0xff != (index = pin_in_PeripheralPinMap(PinMap[ulPin].PinName, PinMap_PWM))) {
+				dev = device_get_binding(PinMap_PWM[index].label_name);
 				if (NULL != dev) {
 					switch (_writeResolution) {
 						case 8: // 8-bit
@@ -155,13 +162,6 @@ void analogWrite(uint32_t ulPin, uint32_t ulValue) {
 
 					pwm_pin_set_usec(dev, PinMap[ulPin].PinName, period, ulValue);
 				}
-			}
-		} else {
-			pinMode(ulPin, OUTPUT);
-			if (ulValue > 0x7f) {
-				digitalWrite(ulPin, HIGH);
-			} else {
-				digitalWrite(ulPin, LOW);
 			}
 		}
 	}

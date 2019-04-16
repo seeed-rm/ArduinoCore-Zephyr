@@ -26,8 +26,11 @@
 #define Variant_h
 
 #include <stdint.h>
+#ifdef __cplusplus
+#include "HardwareSerial.h"
+#endif
 
-#define PinMap_Max		(32)
+#define ALL_GPIOS_NUM		(32)
 
 #define NC          (0xffffffff)
 #define P0_00		(0)
@@ -63,24 +66,24 @@
 #define P0_30		(30)
 #define P0_31		(31)
 
-#define DEV_GPIO_0_STRING	("GPIO_0")
-#define DEV_SPI_0_STRING	("SPI_0")
-#define DEV_SPI_1_STRING	("SPI_1")
-#define DEV_SPI_2_STRING	("SPI_2")
-#define DEV_SPI_3_STRING	("SPI_3")
-#define DEV_I2C_0_STRING	("I2C_0")
-#define DEV_I2C_1_STRING	("I2C_1")
-#define DEV_I2C_2_STRING	("I2C_2")
-#define DEV_I2C_3_STRING	("I2C_3")
-#define DEV_UART_0_STRING	("UART_0")
-#define DEV_UART_1_STRING	("UART_1")
-#define DEV_UART_2_STRING	("UART_2")
-#define DEV_UART_3_STRING	("UART_3")
-#define DEV_I2S_STRING		("I2S")
-#define DEV_PWM_0_STRING	("PWM_0")
-#define DEV_PWM_1_STRING	("PWM_1")
-#define DEV_PWM_2_STRING	("PWM_2")
-#define DEV_ADC_0_STRING	("ADC_0")
+#define DT_GPIO_0_LABEL	("GPIO_0")
+#define DT_SPI_0_LABEL	("SPI_0")
+#define DT_SPI_1_LABEL	("SPI_1")
+#define DT_SPI_2_LABEL	("SPI_2")
+#define DT_SPI_3_LABEL	("SPI_3")
+#define DT_I2C_0_LABEL	("I2C_0")
+#define DT_I2C_1_LABEL	("I2C_1")
+#define DT_I2C_2_LABEL	("I2C_2")
+#define DT_I2C_3_LABEL	("I2C_3")
+#define DT_UART_0_LABEL	("UART_0")
+#define DT_UART_1_LABEL	("UART_1")
+#define DT_UART_2_LABEL	("UART_2")
+#define DT_UART_3_LABEL	("UART_3")
+#define DT_I2S_0_LABEL	("I2S_0")
+#define DT_PWM_0_LABEL	("PWM_0")
+#define DT_PWM_1_LABEL	("PWM_1")
+#define DT_PWM_2_LABEL	("PWM_2")
+#define DT_ADC_0_LABEL	("ADC_0")
 
 
 typedef enum _EPioType {
@@ -111,6 +114,13 @@ typedef const struct _PinDescription {
 
 
 extern const char *DevLab[];
-extern const PinDescription PinMap[PinMap_Max];
+extern const PinDescription PinMap[ALL_GPIOS_NUM];
+
+
+#ifdef __cplusplus
+extern HardwareSerial Serial;
+extern HardwareSerial Serial1;
+
+#endif
 
 #endif // Variant_h

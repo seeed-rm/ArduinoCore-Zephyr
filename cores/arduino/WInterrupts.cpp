@@ -46,7 +46,7 @@
 #include "Arduino.h"
 #include "WInterrupts.h"
 
-static voidFuncPtr callbacks[PinMap_Max];
+static voidFuncPtr callbacks[ALL_GPIOS_NUM];
 
 static void gpio_handler(struct device *port, struct gpio_callback *cb, u32_t pins) {
 	int i = 0;
@@ -64,7 +64,7 @@ void attachInterrupt(uint32_t ulPin, void (*callback)(void), uint32_t ulMode) {
 	int pinconf = 0;
 	struct device *dev;
 
-	if (ulPin < PinMap_Max) {
+	if (ulPin < ALL_GPIOS_NUM) {
 		if (0xf000 & gpio_configs[PinMap[ulPin].PinName]) {
 			pinconf = GPIO_DIR_IN;
 		} else {
@@ -110,7 +110,7 @@ void attachInterrupt(uint32_t ulPin, void (*callback)(void), uint32_t ulMode) {
 void detachInterrupt(uint32_t ulPin) {
 	struct device *dev;
 
-	if (ulPin < PinMap_Max) {
+	if (ulPin < ALL_GPIOS_NUM) {
 		dev = device_get_binding(DevLab[PinMap[ulPin].PioType]);
 		if (NULL != dev) {
 			gpio_remove_callback(dev, &gpio_cb[ulPin]);

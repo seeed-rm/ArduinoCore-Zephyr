@@ -62,7 +62,7 @@ extern "C" {
 void pinMode(uint32_t ulPin, uint32_t ulMode) {
     struct device *dev;
 
-	if (ulPin < PinMap_Max) {
+	if (ulPin < ALL_GPIOS_NUM) {
 		gpio_configs[PinMap[ulPin].PinName] = ulMode;
 		dev = device_get_binding(DevLab[PinMap[ulPin].PioType]);
 		if (NULL != dev) {
@@ -99,7 +99,7 @@ void pinMode(uint32_t ulPin, uint32_t ulMode) {
 void digitalWrite(uint32_t ulPin, uint32_t ulVal) {
     struct device *dev;
 
-	if (ulPin < PinMap_Max) {
+	if (ulPin < ALL_GPIOS_NUM) {
 		dev = device_get_binding(DevLab[PinMap[ulPin].PioType]);
 		if (NULL != dev) {
 			gpio_pin_write(dev, PinMap[ulPin].PinName, ulVal);
@@ -116,7 +116,7 @@ int digitalRead(uint32_t ulPin) {
 	uint32_t value = 0;
     struct device *dev;
 
-	if (ulPin < PinMap_Max) {
+	if (ulPin < ALL_GPIOS_NUM) {
 		dev = device_get_binding(DevLab[PinMap[ulPin].PioType]);
 		if (NULL != dev) {
 			gpio_pin_read(dev, PinMap[ulPin].PinName, &value);
