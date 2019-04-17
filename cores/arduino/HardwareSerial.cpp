@@ -30,20 +30,55 @@ extern "C" {
 }
 #endif
 
-#ifndef max
-#define max(A, B) ((A) < (B) ? (B) : (A))
-#endif
-
 HardwareSerial::HardwareSerial() {
-	uart = device_get_binding("UART_0");
 }
 
-void HardwareSerial::begin(unsigned long baudrate, uint32_t tx_pin, uint32_t rx_pin) {
-	begin(baudrate, SERIAL_8N1, tx_pin, rx_pin);
+void HardwareSerial::uart_irq_cb() {
+	int i = 0;
+	int length = 0;
+	uint8_t uart_buf[SERIAL_BUFFER_SIZE] = {0};
+	
+	uart_irq_update(uart);
+
+	if (uart_irq_rx_ready(uart)) {
+		length = uart_fifo_read(uart, uart_buf, sizeof(uart_buf));
+		printk("uart_fifo_read = %d\r\n", length);
+		for (i = 0; i < length; i++) {
+			_rx_buffer->store_char(uart_buf[i]);
+		}
+	}
+
+	if (uart_irq_tx_ready(uart)) {
+		if (_tx_buffer->_iHead != _tx_buffer->_iTail) {
+			length = uart_fifo_fill(uart, &(_tx_buffer->_aucBuffer[_tx_buffer->_iTail]), 1);
+			if (1 == length) {
+				_tx_buffer->_iTail = (unsigned int)(_tx_buffer->_iTail + 1) % SERIAL_BUFFER_SIZE;
+			}
+		}
+	}
+	
+	if (uart_irq_tx_complete(uart)) {
+		uart_irq_tx_disable(uart);
+	}
 }
 
-void HardwareSerial::begin(unsigned long baudrate, uint16_t config, uint32_t tx_pin, uint32_t rx_pin) {
-	uint8_t index = 0xff;
+void HardwareSerial::uart_irq_dispatch(void *userdata) {
+	reinterpret_cast<HardwareSerial *>(userdata)->uart_irq_cb();
+}
+
+void HardwareSerial::init(RingBuffer *pRx_buffer, RingBuffer *pTx_buffer) {
+	_tx_buffer = pRx_buffer;
+	_rx_buffer = pTx_buffer;
+	
+	_tx_buffer->_iHead = _tx_buffer->_iTail = 0;
+	_rx_buffer->_iHead = _rx_buffer->_iTail = 0;
+}
+
+void HardwareSerial::begin(unsigned long baudrate, const char *label, RingBuffer *pRx_buffer, RingBuffer *pTx_buffer, uint32_t tx_pin, uint32_t rx_pin) {
+	begin(baudrate, SERIAL_8N1, label, pRx_buffer, pTx_buffer, tx_pin, rx_pin);
+}
+
+void HardwareSerial::begin(unsigned long baudrate, uint16_t config, const char *label, RingBuffer *pRx_buffer, RingBuffer *pTx_buffer, uint32_t tx_pin, uint32_t rx_pin) {
 	struct uart_config uart_cfg;
 
 	uart_cfg.baudrate = baudrate;
@@ -52,111 +87,79 @@ void HardwareSerial::begin(unsigned long baudrate, uint16_t config, uint32_t tx_
 	uart_cfg.data_bits = (config >> 8) & 0x0f;
 	uart_cfg.flow_ctrl = (config >> 12) & 0x0f;
 
-	if ((tx_pin != rx_pin) || (tx_pin < ALL_GPIOS_NUM) || (rx_pin < ALL_GPIOS_NUM)) {
-		if (0xff != (index = pin_in_PeripheralPinMap(PinMap[tx_pin].PinName, PinMap_UART_TX))) {
-			uart = device_get_binding(PinMap_UART_TX[index].label_name);
-			printk("tx->label = %s\r\n", PinMap_UART_TX[index].label_name);
-		} else if (0xff != (index = pin_in_PeripheralPinMap(PinMap[rx_pin].PinName, PinMap_UART_RX))) {
-			uart = device_get_binding(PinMap_UART_RX[index].label_name);
-			printk("rx->label = %s\r\n", PinMap_UART_RX[index].label_name);
-		} else {
-			uart = NULL;
-			printk("label is NULL\r\n");
-		}
+	uart = device_get_binding(label);
+	
+	if (NULL != uart) {
+		printk("set callback function\r\n");
+		uart_configure(uart, &uart_cfg);
+		uart_irq_callback_user_data_set(uart, uart_irq_dispatch, this);
+		uart_irq_rx_enable(uart);
 		
-		if (NULL != uart) {
-			printk("set callback function\r\n");
-			uart_configure(uart, &uart_cfg);
-			uart_irq_callback_user_data_set(uart, IrqDispatch, this);
-			uart_irq_rx_enable(uart);
-		}
+		init(pRx_buffer, pTx_buffer);
 	}
 }
 
-void HardwareSerial::end()
-{
+void HardwareSerial::end() {	
+	// Clear any received data
+	_rx_buffer->_iHead = _rx_buffer->_iTail;
+	
+	// Wait for any outstanding data to be sent
 	flush();
-	//uart->deinit(uart->portinfo);
 }
 
-void HardwareSerial::flush()
-{
-	//while (uart_irq_tx_complete(uart) );
+int HardwareSerial::available() {
+	return (uint32_t)(SERIAL_BUFFER_SIZE + _rx_buffer->_iHead - _rx_buffer->_iTail) % SERIAL_BUFFER_SIZE;
 }
 
-void HardwareSerial::IrqHandler()
-{
-	uart_irq_update(uart);
-
-	if (uart_irq_tx_ready(uart)) {
-		data_transmitted = true;
+int HardwareSerial::availableForWrite() {
+	int tx_head = _tx_buffer->_iHead;
+	int tx_tail = _tx_buffer->_iTail;
+	
+	if (tx_head >= tx_tail) {
+		return SERIAL_BUFFER_SIZE - 1 - tx_head + tx_tail;
 	}
-
-	int rxcount = uart_irq_rx_ready(uart);
-	if(rxcount == 0) return;
-
-	do {
-		static uint8_t buf[32];
-		int ret = uart_fifo_read(uart, buf, max(rxcount, 32) ); 
-		if(ret) {
-			for(int i=0; i<max(rxcount, 32); i++) {
-				rxBuffer.store_char(buf[i]);
-			}
-		}
-		rxcount = uart_irq_rx_ready(uart);
-	} while(rxcount > 0);
+	return tx_tail - tx_head - 1;	
 }
 
-void HardwareSerial::IrqDispatch(void* data)
-{
-	reinterpret_cast<HardwareSerial *>(data)->IrqHandler();
+int HardwareSerial::peek() {
+	if (_rx_buffer->_iHead == _rx_buffer->_iTail) {
+		return -1;
+	}
+	
+	return _rx_buffer->_aucBuffer[_rx_buffer->_iTail];
 }
 
-int HardwareSerial::available()
-{
-	return (uint32_t)(SERIAL_BUFFER_SIZE + rxBuffer._iHead - rxBuffer._iTail) % SERIAL_BUFFER_SIZE;
+int HardwareSerial::read() {
+	uint8_t data = 0;
+
+	// if the head isn't ahead of the tail, we don't have any characters
+	if (_rx_buffer->_iHead == _rx_buffer->_iTail) {
+		return -1;
+	}
+	
+	data = _rx_buffer->_aucBuffer[_rx_buffer->_iTail];
+	_rx_buffer->_iTail = (unsigned int)(_rx_buffer->_iTail + 1) % SERIAL_BUFFER_SIZE;
+	return data;
 }
 
-int HardwareSerial::availableForWrite()
-{
-	return 0;//return uart->txbuffer_availables(uart->portinfo);
+void HardwareSerial::flush(void) {
+	//wait for transmit data to be sent
+	while (_tx_buffer->_iHead != _tx_buffer->_iTail);
+	
+	// Wait for transmission to complete
+	while (uart_irq_tx_complete(uart));
 }
 
-int HardwareSerial::peek()
-{
-	return rxBuffer.peek();
-}
+size_t HardwareSerial::write(const uint8_t data) {
+	int nextWrite;
 
-int HardwareSerial::read()
-{
-	return rxBuffer.read_char();
-}
-
-size_t HardwareSerial::write(const uint8_t *buffer, size_t size)
-{
+	// If busy we buffer
+	nextWrite = (_tx_buffer->_iHead + 1) % SERIAL_BUFFER_SIZE;
+	// Spin locks if we're about to overwrite the buffer. This continues once the data is sent
+	while (_tx_buffer->_iTail == nextWrite);
+	
+	_tx_buffer->_aucBuffer[_tx_buffer->_iHead] = data;
+	_tx_buffer->_iHead = nextWrite;
 	uart_irq_tx_enable(uart);
-
-	int len = size;
-	while (len) {
-		int written;
-
-		data_transmitted = false;
-		written = uart_fifo_fill(uart, buffer, len);
-		while (data_transmitted == false) {
-			k_yield();
-		}
-
-		len -= written;
-		buffer += written;
-	}
-
-	uart_irq_tx_disable(uart);
 	return 0;
-}
-
-
-size_t HardwareSerial::write(const uint8_t data)
-{
-	write(&data, 1);
-	return 1;
 }

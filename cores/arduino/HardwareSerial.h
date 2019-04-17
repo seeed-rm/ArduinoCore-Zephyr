@@ -15,6 +15,7 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#pragma once
 
 #ifndef HardwareSerial_h
 #define HardwareSerial_h
@@ -79,8 +80,8 @@ class HardwareSerial : public Stream
 	public:
 		HardwareSerial();
 		virtual ~HardwareSerial() {}
-		void begin(unsigned long baudrate, uint32_t tx_pin = 29, uint32_t rx_pin = 28);
-		void begin(unsigned long baudrate, uint16_t config, uint32_t tx_pin = 29, uint32_t rx_pin = 28);
+		void begin(unsigned long baudrate, const char *label, RingBuffer *pRx_buffer, RingBuffer *pTx_buffer, uint32_t tx_pin = 29, uint32_t rx_pin = 28);
+		void begin(unsigned long baudrate, uint16_t config, const char *label, RingBuffer *pRx_buffer, RingBuffer *pTx_buffer, uint32_t tx_pin = 29, uint32_t rx_pin = 28);
 		void end();
 		int available();
 		int availableForWrite();
@@ -88,18 +89,19 @@ class HardwareSerial : public Stream
 		int read();
 		void flush();
 		size_t write(const uint8_t data);
-		size_t write(const uint8_t *buffer, size_t size);
 		using Print::write; // pull in write(str) and write(buf, size) from Print
-		void IrqHandler();
+		void uart_irq_cb();
 		operator bool() { return true; }
+		void operator delete(void *ptr) {}
 
 	protected:
 		struct device *uart;
-		void begin_impl(unsigned long baudrate, uint16_t config);
 
 	private:
-		RingBuffer rxBuffer;
-		static void IrqDispatch(void* data);
+		RingBuffer *_rx_buffer;
+	    RingBuffer *_tx_buffer;
+		void init(RingBuffer *pRx_buffer, RingBuffer *pTx_buffer);
+		static void uart_irq_dispatch(void *userdata);
 		volatile bool data_transmitted;
 };
 

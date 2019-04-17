@@ -5,10 +5,9 @@
 
 #include "HardwareSerial.h"
 
-class UartACM : public HardwareSerial
-{
-  public:
-    UartACM(uint32_t _rx, uint32_t _tx);// : HardwareSerial(uint32_t _rx, uint32_t _tx) { }
-  protected:
-    void begin_impl(unsigned long baudrate, uint16_t config);
+class UartACM : public HardwareSerial {
+	public:
+		UartACM();
+		void begin(unsigned long baudrate, const char *label, RingBuffer *pRx_buffer, RingBuffer *pTx_buffer, uint32_t tx_pin = 29, uint32_t rx_pin = 28);
+		void begin(unsigned long baudrate, uint16_t config, const char *label, RingBuffer *pRx_buffer, RingBuffer *pTx_buffer, uint32_t tx_pin = 29, uint32_t rx_pin = 28);
 };
