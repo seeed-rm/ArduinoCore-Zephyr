@@ -1,6 +1,6 @@
 #include "UartACM.h"
 
-void UartACM::begin(unsigned long baudrate, const char *label, RingBuffer *pRx_buffer, RingBuffer *pTx_buffer, uint32_t tx_pin, uint32_t rx_pin) {	
+void UartACM::begin(unsigned long baudrate, const char *label, uint32_t tx_pin, uint32_t rx_pin) {	
 	#if 0
 	u32_t dtr = 0;
 	while (1) {
@@ -30,10 +30,10 @@ void UartACM::begin(unsigned long baudrate, const char *label, RingBuffer *pRx_b
 #endif
 
 	#endif
-	begin(baudrate, SERIAL_8N1, label, pRx_buffer, pTx_buffer, tx_pin, rx_pin);
+	begin(baudrate, SERIAL_8N1, label, tx_pin, rx_pin);
 }
 
-void UartACM::begin(unsigned long baudrate, uint16_t config, const char *label, RingBuffer *pRx_buffer, RingBuffer *pTx_buffer, uint32_t tx_pin, uint32_t rx_pin) {	
+void UartACM::begin(unsigned long baudrate, uint16_t config, const char *label, uint32_t tx_pin, uint32_t rx_pin) {	
 	#if 0
 	u32_t dtr = 0;
 	while (1) {
@@ -63,6 +63,6 @@ void UartACM::begin(unsigned long baudrate, uint16_t config, const char *label, 
 #endif
 
 	#endif
-	HardwareSerial::begin(baudrate, config, label, pRx_buffer, pTx_buffer, tx_pin, rx_pin);
+	HardwareSerial::begin(baudrate, config, label, tx_pin, rx_pin);
 }
 

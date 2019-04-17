@@ -36,13 +36,13 @@ HardwareSerial::HardwareSerial() {
 void HardwareSerial::uart_irq_cb() {
 	int i = 0;
 	int length = 0;
-	uint8_t uart_buf[SERIAL_BUFFER_SIZE] = {0};
+	uint8_t uart_buf[32] = {0};
+	int w_length = 0;
 	
 	uart_irq_update(uart);
 
 	if (uart_irq_rx_ready(uart)) {
 		length = uart_fifo_read(uart, uart_buf, sizeof(uart_buf));
-		printk("uart_fifo_read = %d\r\n", length);
 		for (i = 0; i < length; i++) {
 			_rx_buffer->store_char(uart_buf[i]);
 		}
@@ -52,7 +52,8 @@ void HardwareSerial::uart_irq_cb() {
 		if (_tx_buffer->_iHead != _tx_buffer->_iTail) {
 			length = uart_fifo_fill(uart, &(_tx_buffer->_aucBuffer[_tx_buffer->_iTail]), 1);
 			if (1 == length) {
-				_tx_buffer->_iTail = (unsigned int)(_tx_buffer->_iTail + 1) % SERIAL_BUFFER_SIZE;
+				w_length = (_tx_buffer->_iTail + 1) % SERIAL_BUFFER_SIZE;
+				_tx_buffer->_iTail = w_length;
 			}
 		}
 	}
@@ -66,19 +67,19 @@ void HardwareSerial::uart_irq_dispatch(void *userdata) {
 	reinterpret_cast<HardwareSerial *>(userdata)->uart_irq_cb();
 }
 
-void HardwareSerial::init(RingBuffer *pRx_buffer, RingBuffer *pTx_buffer) {
-	_tx_buffer = pRx_buffer;
-	_rx_buffer = pTx_buffer;
-	
+void HardwareSerial::init() {
+	_tx_buffer = new RingBuffer();
+	_rx_buffer = new RingBuffer();
+
 	_tx_buffer->_iHead = _tx_buffer->_iTail = 0;
 	_rx_buffer->_iHead = _rx_buffer->_iTail = 0;
 }
 
-void HardwareSerial::begin(unsigned long baudrate, const char *label, RingBuffer *pRx_buffer, RingBuffer *pTx_buffer, uint32_t tx_pin, uint32_t rx_pin) {
-	begin(baudrate, SERIAL_8N1, label, pRx_buffer, pTx_buffer, tx_pin, rx_pin);
+void HardwareSerial::begin(unsigned long baudrate, const char *label, uint32_t tx_pin, uint32_t rx_pin) {
+	begin(baudrate, SERIAL_8N1, label, tx_pin, rx_pin);
 }
 
-void HardwareSerial::begin(unsigned long baudrate, uint16_t config, const char *label, RingBuffer *pRx_buffer, RingBuffer *pTx_buffer, uint32_t tx_pin, uint32_t rx_pin) {
+void HardwareSerial::begin(unsigned long baudrate, uint16_t config, const char *label, uint32_t tx_pin, uint32_t rx_pin) {
 	struct uart_config uart_cfg;
 
 	uart_cfg.baudrate = baudrate;
@@ -95,7 +96,7 @@ void HardwareSerial::begin(unsigned long baudrate, uint16_t config, const char *
 		uart_irq_callback_user_data_set(uart, uart_irq_dispatch, this);
 		uart_irq_rx_enable(uart);
 		
-		init(pRx_buffer, pTx_buffer);
+		init();
 	}
 }
 

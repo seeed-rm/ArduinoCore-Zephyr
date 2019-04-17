@@ -8,6 +8,6 @@
 class UartACM : public HardwareSerial {
 	public:
 		UartACM();
-		void begin(unsigned long baudrate, const char *label, RingBuffer *pRx_buffer, RingBuffer *pTx_buffer, uint32_t tx_pin = 29, uint32_t rx_pin = 28);
-		void begin(unsigned long baudrate, uint16_t config, const char *label, RingBuffer *pRx_buffer, RingBuffer *pTx_buffer, uint32_t tx_pin = 29, uint32_t rx_pin = 28);
+		void begin(unsigned long baudrate, const char *label, uint32_t tx_pin = 29, uint32_t rx_pin = 28);
+		void begin(unsigned long baudrate, uint16_t config, const char *label, uint32_t tx_pin = 29, uint32_t rx_pin = 28);
 };
